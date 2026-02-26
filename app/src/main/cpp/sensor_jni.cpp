@@ -11,11 +11,19 @@
 static JavaVM* g_vm = nullptr;
 static jobject g_callback_object = nullptr;
 static jmethodID g_callback_method = nullptr;
+static jmethodID g_gyroscope_callback_method = nullptr;
+static jmethodID g_magnetometer_callback_method = nullptr;
 
 // Global sensor manager instance
 static std::unique_ptr<NativeSensorManager> g_sensor_manager;
 
-// Callback function to be called from native code
+static void callJavaCallback(JNIEnv* env, jobject callback_object, jmethodID method, float x, float y, float z) {
+    if (callback_object && method) {
+        env->CallVoidMethod(callback_object, method, x, y, z);
+    }
+}
+
+// Callback functions to be called from native code
 void onSensorDataChanged(const AccelerometerData& data) {
     if (g_vm && g_callback_object && g_callback_method) {
         JNIEnv* env;
@@ -30,8 +38,51 @@ void onSensorDataChanged(const AccelerometerData& data) {
             need_detach = true;
         }
         
-        // Call the Java callback method
-        env->CallVoidMethod(g_callback_object, g_callback_method, data.x, data.y, data.z);
+        callJavaCallback(env, g_callback_object, g_callback_method, data.x, data.y, data.z);
+        
+        if (need_detach) {
+            g_vm->DetachCurrentThread();
+        }
+    }
+}
+
+void onGyroscopeDataChanged(const GyroscopeData& data) {
+    if (g_vm && g_callback_object && g_gyroscope_callback_method) {
+        JNIEnv* env;
+        bool need_detach = false;
+        
+        int get_env_stat = g_vm->GetEnv((void**)&env, JNI_VERSION_1_6);
+        if (get_env_stat == JNI_EDETACHED) {
+            if (g_vm->AttachCurrentThread(&env, nullptr) != 0) {
+                LOGE("Failed to attach current thread");
+                return;
+            }
+            need_detach = true;
+        }
+        
+        callJavaCallback(env, g_callback_object, g_gyroscope_callback_method, data.x, data.y, data.z);
+        
+        if (need_detach) {
+            g_vm->DetachCurrentThread();
+        }
+    }
+}
+
+void onMagnetometerDataChanged(const MagnetometerData& data) {
+    if (g_vm && g_callback_object && g_magnetometer_callback_method) {
+        JNIEnv* env;
+        bool need_detach = false;
+        
+        int get_env_stat = g_vm->GetEnv((void**)&env, JNI_VERSION_1_6);
+        if (get_env_stat == JNI_EDETACHED) {
+            if (g_vm->AttachCurrentThread(&env, nullptr) != 0) {
+                LOGE("Failed to attach current thread");
+                return;
+            }
+            need_detach = true;
+        }
+        
+        callJavaCallback(env, g_callback_object, g_magnetometer_callback_method, data.x, data.y, data.z);
         
         if (need_detach) {
             g_vm->DetachCurrentThread();
@@ -50,6 +101,8 @@ Java_com_example_imu_NativeSensorManager_nativeInitialize(JNIEnv* env, jobject t
     bool result = g_sensor_manager->initialize();
     if (result) {
         g_sensor_manager->setDataCallback(onSensorDataChanged);
+        g_sensor_manager->setGyroscopeCallback(onGyroscopeDataChanged);
+        g_sensor_manager->setMagnetometerCallback(onMagnetometerDataChanged);
     }
     
     return result;
@@ -97,13 +150,49 @@ Java_com_example_imu_NativeSensorManager_nativeSetCallback(JNIEnv* env, jobject 
     }
     g_callback_object = env->NewGlobalRef(callback_object);
     
-    // Get the method ID for the callback
+    // Get the method IDs for the callbacks
     jclass callback_class = env->GetObjectClass(callback_object);
     g_callback_method = env->GetMethodID(callback_class, "onSensorDataChanged", "(FFF)V");
+    g_gyroscope_callback_method = env->GetMethodID(callback_class, "onGyroscopeDataChanged", "(FFF)V");
+    g_magnetometer_callback_method = env->GetMethodID(callback_class, "onMagnetometerDataChanged", "(FFF)V");
     
     if (!g_callback_method) {
         LOGE("Failed to find onSensorDataChanged method");
     }
+}
+
+JNIEXPORT jfloatArray JNICALL
+Java_com_example_imu_NativeSensorManager_nativeGetCurrentGyroscopeData(JNIEnv* env, jobject thiz) {
+    if (!g_sensor_manager) {
+        return nullptr;
+    }
+    
+    GyroscopeData data = g_sensor_manager->getCurrentGyroscopeData();
+    
+    jfloatArray result = env->NewFloatArray(3);
+    if (result) {
+        jfloat values[3] = {data.x, data.y, data.z};
+        env->SetFloatArrayRegion(result, 0, 3, values);
+    }
+    
+    return result;
+}
+
+JNIEXPORT jfloatArray JNICALL
+Java_com_example_imu_NativeSensorManager_nativeGetCurrentMagnetometerData(JNIEnv* env, jobject thiz) {
+    if (!g_sensor_manager) {
+        return nullptr;
+    }
+    
+    MagnetometerData data = g_sensor_manager->getCurrentMagnetometerData();
+    
+    jfloatArray result = env->NewFloatArray(3);
+    if (result) {
+        jfloat values[3] = {data.x, data.y, data.z};
+        env->SetFloatArrayRegion(result, 0, 3, values);
+    }
+    
+    return result;
 }
 
 JNIEXPORT void JNICALL
@@ -116,6 +205,8 @@ Java_com_example_imu_NativeSensorManager_nativeCleanup(JNIEnv* env, jobject thiz
     g_sensor_manager.reset();
     g_vm = nullptr;
     g_callback_method = nullptr;
+    g_gyroscope_callback_method = nullptr;
+    g_magnetometer_callback_method = nullptr;
 }
 
 } // extern "C" 

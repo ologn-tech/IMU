@@ -11,6 +11,8 @@ class SensorManager(private val context: Context) : LifecycleEventObserver {
     private val nativeSensorManager = NativeSensorManager()
     
     val accelerometerData: StateFlow<AccelerometerData> = nativeSensorManager.accelerometerData
+    val gyroscopeData: StateFlow<GyroscopeData> = nativeSensorManager.gyroscopeData
+    val magnetometerData: StateFlow<MagnetometerData> = nativeSensorManager.magnetometerData
     
     fun initialize(): Boolean {
         return nativeSensorManager.initialize()
@@ -26,6 +28,14 @@ class SensorManager(private val context: Context) : LifecycleEventObserver {
     
     fun getCurrentData(): AccelerometerData {
         return nativeSensorManager.getCurrentData()
+    }
+    
+    fun getCurrentGyroscopeData(): GyroscopeData {
+        return nativeSensorManager.getCurrentGyroscopeData()
+    }
+    
+    fun getCurrentMagnetometerData(): MagnetometerData {
+        return nativeSensorManager.getCurrentMagnetometerData()
     }
     
     fun cleanup() {

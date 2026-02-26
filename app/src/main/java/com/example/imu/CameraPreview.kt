@@ -80,6 +80,8 @@ fun CameraContent(context: Context, lifecycleOwner: LifecycleOwner) {
     // Create and observe sensor manager
     val sensorManager = remember { SensorManager(context) }
     val accelerometerData by sensorManager.accelerometerData.collectAsState()
+    val gyroscopeData by sensorManager.gyroscopeData.collectAsState()
+    val magnetometerData by sensorManager.magnetometerData.collectAsState()
     
     // Observe lifecycle events
     DisposableEffect(lifecycleOwner) {
@@ -122,11 +124,30 @@ fun CameraContent(context: Context, lifecycleOwner: LifecycleOwner) {
             }
         )
         
-        // Accelerometer data overlay
-        AccelerometerOverlay(
+        // Sensors data overlay (Accelerometer, Gyroscope, Magnetometer - vertical)
+        SensorsOverlay(
             accelerometerData = accelerometerData,
+            gyroscopeData = gyroscopeData,
+            magnetometerData = magnetometerData,
             modifier = Modifier.align(Alignment.TopStart)
         )
+    }
+}
+
+@Composable
+fun SensorsOverlay(
+    accelerometerData: AccelerometerData,
+    gyroscopeData: GyroscopeData,
+    magnetometerData: MagnetometerData,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier.padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        AccelerometerOverlay(accelerometerData = accelerometerData)
+        GyroscopeOverlay(gyroscopeData = gyroscopeData)
+        MagnetometerOverlay(magnetometerData = magnetometerData)
     }
 }
 
@@ -135,8 +156,57 @@ fun AccelerometerOverlay(
     accelerometerData: AccelerometerData,
     modifier: Modifier = Modifier
 ) {
+    SensorCard(
+        title = "Accelerometer",
+        x = accelerometerData.x,
+        y = accelerometerData.y,
+        z = accelerometerData.z,
+        unit = "m/s²",
+        modifier = modifier
+    )
+}
+
+@Composable
+fun GyroscopeOverlay(
+    gyroscopeData: GyroscopeData,
+    modifier: Modifier = Modifier
+) {
+    SensorCard(
+        title = "Gyroscope",
+        x = gyroscopeData.x,
+        y = gyroscopeData.y,
+        z = gyroscopeData.z,
+        unit = "rad/s",
+        modifier = modifier
+    )
+}
+
+@Composable
+fun MagnetometerOverlay(
+    magnetometerData: MagnetometerData,
+    modifier: Modifier = Modifier
+) {
+    SensorCard(
+        title = "Magnetometer",
+        x = magnetometerData.x,
+        y = magnetometerData.y,
+        z = magnetometerData.z,
+        unit = "µT",
+        modifier = modifier
+    )
+}
+
+@Composable
+private fun SensorCard(
+    title: String,
+    x: Float,
+    y: Float,
+    z: Float,
+    unit: String,
+    modifier: Modifier = Modifier
+) {
     Card(
-        modifier = modifier.padding(16.dp),
+        modifier = modifier,
         colors = CardDefaults.cardColors(
             containerColor = Color.Black.copy(alpha = 0.7f)
         ),
@@ -144,26 +214,26 @@ fun AccelerometerOverlay(
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
+            verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
             Text(
-                text = "Accelerometer",
+                text = title,
                 color = Color.White,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold
             )
             Text(
-                text = "X: ${String.format("%.2f", accelerometerData.x)} m/s²",
+                text = "X: ${String.format("%.2f", x)} $unit",
                 color = Color.White,
                 fontSize = 14.sp
             )
             Text(
-                text = "Y: ${String.format("%.2f", accelerometerData.y)} m/s²",
+                text = "Y: ${String.format("%.2f", y)} $unit",
                 color = Color.White,
                 fontSize = 14.sp
             )
             Text(
-                text = "Z: ${String.format("%.2f", accelerometerData.z)} m/s²",
+                text = "Z: ${String.format("%.2f", z)} $unit",
                 color = Color.White,
                 fontSize = 14.sp
             )

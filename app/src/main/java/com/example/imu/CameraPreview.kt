@@ -10,7 +10,9 @@ import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -23,6 +25,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -78,11 +81,9 @@ fun CameraPreview() {
 fun CameraContent(context: Context, lifecycleOwner: LifecycleOwner) {
     val cameraProviderFuture = remember { ProcessCameraProvider.getInstance(context) }
     
-    // Create and observe sensor manager
+    // Create and observe sensor manager (all ACCELEROMETER, GYROSCOPE, MAGNETIC_FIELD sensors)
     val sensorManager = remember { SensorManager(context) }
-    val accelerometerData by sensorManager.accelerometerData.collectAsState()
-    val gyroscopeData by sensorManager.gyroscopeData.collectAsState()
-    val magnetometerData by sensorManager.magnetometerData.collectAsState()
+    val sensorReadings by sensorManager.sensorReadings.collectAsState()
     
     // Observe lifecycle events
     DisposableEffect(lifecycleOwner) {
@@ -125,11 +126,9 @@ fun CameraContent(context: Context, lifecycleOwner: LifecycleOwner) {
             }
         )
         
-        // Sensors data overlay (Accelerometer, Gyroscope, Magnetometer - 1 row horizontal at bottom)
+        // Sensors overlay: all ACCELEROMETER, GYROSCOPE, MAGNETIC_FIELD sensors in one horizontal row at bottom
         SensorsOverlay(
-            accelerometerData = accelerometerData,
-            gyroscopeData = gyroscopeData,
-            magnetometerData = magnetometerData,
+            sensorReadings = sensorReadings,
             modifier = Modifier.align(Alignment.BottomCenter)
         )
     }
@@ -137,67 +136,29 @@ fun CameraContent(context: Context, lifecycleOwner: LifecycleOwner) {
 
 @Composable
 fun SensorsOverlay(
-    accelerometerData: AccelerometerData,
-    gyroscopeData: GyroscopeData,
-    magnetometerData: MagnetometerData,
+    sensorReadings: List<SensorReading>,
     modifier: Modifier = Modifier
 ) {
+    val scrollState = rememberScrollState()
     Row(
         modifier = modifier
             .fillMaxWidth()
+            .horizontalScroll(scrollState)
             .padding(16.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.Bottom
     ) {
-        AccelerometerOverlay(accelerometerData = accelerometerData)
-        GyroscopeOverlay(gyroscopeData = gyroscopeData)
-        MagnetometerOverlay(magnetometerData = magnetometerData)
+        for (reading in sensorReadings) {
+            SensorCard(
+                title = reading.name,
+                x = reading.x,
+                y = reading.y,
+                z = reading.z,
+                unit = reading.unit(),
+                modifier = Modifier
+            )
+        }
     }
-}
-
-@Composable
-fun AccelerometerOverlay(
-    accelerometerData: AccelerometerData,
-    modifier: Modifier = Modifier
-) {
-    SensorCard(
-        title = "Accelerometer",
-        x = accelerometerData.x,
-        y = accelerometerData.y,
-        z = accelerometerData.z,
-        unit = "m/s²",
-        modifier = modifier
-    )
-}
-
-@Composable
-fun GyroscopeOverlay(
-    gyroscopeData: GyroscopeData,
-    modifier: Modifier = Modifier
-) {
-    SensorCard(
-        title = "Gyroscope",
-        x = gyroscopeData.x,
-        y = gyroscopeData.y,
-        z = gyroscopeData.z,
-        unit = "rad/s",
-        modifier = modifier
-    )
-}
-
-@Composable
-fun MagnetometerOverlay(
-    magnetometerData: MagnetometerData,
-    modifier: Modifier = Modifier
-) {
-    SensorCard(
-        title = "Magnetometer",
-        x = magnetometerData.x,
-        y = magnetometerData.y,
-        z = magnetometerData.z,
-        unit = "µT",
-        modifier = modifier
-    )
 }
 
 @Composable
@@ -220,12 +181,21 @@ private fun SensorCard(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
-            Text(
-                text = title,
-                color = Color.White,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold
-            )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .widthIn(max = 120.dp)
+            ) {
+                Text(
+                    text = title,
+                    color = Color.White,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
             Text(
                 text = "X: ${String.format("% 5.2f", x)} $unit",
                 color = Color.White,

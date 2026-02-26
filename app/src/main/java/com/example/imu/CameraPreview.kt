@@ -21,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -124,12 +125,12 @@ fun CameraContent(context: Context, lifecycleOwner: LifecycleOwner) {
             }
         )
         
-        // Sensors data overlay (Accelerometer, Gyroscope, Magnetometer - vertical)
+        // Sensors data overlay (Accelerometer, Gyroscope, Magnetometer - 1 row horizontal at bottom)
         SensorsOverlay(
             accelerometerData = accelerometerData,
             gyroscopeData = gyroscopeData,
             magnetometerData = magnetometerData,
-            modifier = Modifier.align(Alignment.TopStart)
+            modifier = Modifier.align(Alignment.BottomCenter)
         )
     }
 }
@@ -141,9 +142,12 @@ fun SensorsOverlay(
     magnetometerData: MagnetometerData,
     modifier: Modifier = Modifier
 ) {
-    Column(
-        modifier = modifier.padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.Bottom
     ) {
         AccelerometerOverlay(accelerometerData = accelerometerData)
         GyroscopeOverlay(gyroscopeData = gyroscopeData)
@@ -219,23 +223,26 @@ private fun SensorCard(
             Text(
                 text = title,
                 color = Color.White,
-                fontSize = 16.sp,
+                fontSize = 12.sp,
                 fontWeight = FontWeight.Bold
             )
             Text(
-                text = "X: ${String.format("%.2f", x)} $unit",
+                text = "X: ${String.format("% 5.2f", x)} $unit",
                 color = Color.White,
-                fontSize = 14.sp
+                fontSize = 10.sp,
+                fontFamily = FontFamily.Monospace
             )
             Text(
-                text = "Y: ${String.format("%.2f", y)} $unit",
+                text = "Y: ${String.format("% 5.2f", y)} $unit",
                 color = Color.White,
-                fontSize = 14.sp
+                fontSize = 10.sp,
+                fontFamily = FontFamily.Monospace
             )
             Text(
-                text = "Z: ${String.format("%.2f", z)} $unit",
+                text = "Z: ${String.format("% 5.2f", z)} $unit",
                 color = Color.White,
-                fontSize = 14.sp
+                fontSize = 10.sp,
+                fontFamily = FontFamily.Monospace
             )
         }
     }
